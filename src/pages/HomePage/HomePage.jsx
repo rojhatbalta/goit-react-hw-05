@@ -13,8 +13,7 @@ const options = {
   },
 };
 
-const url =
-  "https://api.themoviedb.org/3/search/movie?include_adult=false&language=en-US&page=1";
+const url = `https://api.themoviedb.org/3/search/movie?include_adult=false&language=en-US&page=1`;
 
 export default function HomePage() {
   const [trendMovies, setTrendMovies] = useState([]);

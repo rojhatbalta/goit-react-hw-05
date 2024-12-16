@@ -12,7 +12,7 @@ const options = {
   },
 };
 
-const url = "https://api.themoviedb.org/3/search/movie/";
+const url = `https://api.themoviedb.org/3/search/movie/`;
 
 export default function MovieCast() {
   const movieId = useOutletContext();
