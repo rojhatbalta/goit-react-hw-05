@@ -17,7 +17,7 @@ const options = {
 };
 
 const url =
-  "<https://api.themoviedb.org/3/search/movie?include_adult=false&language=en-US&page=1>";
+  "https://api.themoviedb.org/3/search/movie?include_adult=false&language=en-US&page=1>";
 
 export default function MoviesPage() {
   const [searchParams, setSearchParams] = useSearchParams();
