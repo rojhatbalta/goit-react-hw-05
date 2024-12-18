@@ -1,18 +1,29 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, Link, NavLink, Outlet, useLocation } from "react-router";
 import Axios from "axios";
+import PropTypes from "prop-types";
 import Styles from "./MovieDetailsPage.module.css";
 
-const options = {
-  method: "GET",
-  headers: {
-    accept: "application/json",
-    Authorization:
-      "Bearer eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJiM2ViMThmMGU3ZGM1MTkxNTgyOTNkZjc1MTliNTQ4MyIsIm5iZiI6MTczNDMwNTU5OS40MTY5OTk4LCJzdWIiOiI2NzVmNjczZjZmODRhMGNlMDc1ZTk1MzIiLCJzY29wZXMiOlsiYXBpX3JlYWQiXSwidmVyc2lvbiI6MX0.EGINKZ0yMZM3uLJ-V9I_wNPlec9b7MgH4X7oYcTL5mg",
-  },
-};
+const api_key = import.meta.env.VITE_API_KEY;
 
-const url = `https://api.themoviedb.org/3/search/movie/`;
+const axiosInstance = Axios.create({
+  baseURL: "https://api.themoviedb.org/3",
+  params: {
+    api_key: api_key,
+  },
+});
+
+function Loading() {
+  return <div>Loading...</div>;
+}
+
+function ErrorMessage({ message }) {
+  return <div className={Styles.ErrorMessage}>Oops! {message}</div>;
+}
+
+ErrorMessage.propTypes = {
+  message: PropTypes.string.isRequired,
+};
 
 export default function MovieDetailsPage() {
   const { movieId } = useParams();
@@ -27,9 +38,8 @@ export default function MovieDetailsPage() {
       async function fetchMovieDetails() {
         try {
           setLoading(true);
-          const res = await Axios.get(url + `${movieId}`, options);
-          const data = await res.data;
-          setMovieDetails(data);
+          const response = await axiosInstance.get(`/movie/${movieId}`);
+          setMovieDetails(response.data);
         } catch (error) {
           setError(error.message);
         } finally {
@@ -44,9 +54,11 @@ export default function MovieDetailsPage() {
 
   return (
     <>
-      <Link to={backLinkRef.current}>Go back</Link>
-      {loading && <p>Loading...</p>}
-      {error && <p>{error}</p>}
+      <Link to={backLinkRef.current} className={Styles.BackLink}>
+        Go back
+      </Link>
+      {loading && <Loading />}
+      {error && <ErrorMessage message={error} />}
       {movieDetails && (
         <div className={Styles.container}>
           <img
@@ -55,11 +67,14 @@ export default function MovieDetailsPage() {
           />
           <div>
             <h2>{movieDetails.title}</h2>
-            <p>Score: {movieDetails.vote_average.toFixed(2)}</p>
+            <p>Score: {movieDetails.vote_average?.toFixed(2) || "N/A"}</p>
             <h3>Overview</h3>
-            <p>{movieDetails.overview}</p>
+            <p>{movieDetails.overview || "No overview available."}</p>
             <h3>Genres</h3>
-            <p>{movieDetails.genres.map((g) => g.name + ", ")}</p>
+            <p>
+              {movieDetails.genres?.map((g) => g.name).join(", ") ||
+                "No genres available."}
+            </p>
             <nav className={Styles.nav}>
               <NavLink to="cast">Cast</NavLink>
               <NavLink to="reviews">Reviews</NavLink>

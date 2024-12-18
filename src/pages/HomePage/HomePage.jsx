@@ -1,19 +1,30 @@
 import { useEffect, useState } from "react";
 import Axios from "axios";
+import PropTypes from "prop-types";
 import Styles from "./HomePage.module.css";
 import Navigation from "../../components/Navigation/Navigation";
 import MovieList from "../../components/MovieList/MovieList";
 
-const options = {
-  method: "GET",
-  headers: {
-    accept: "application/json",
-    Authorization:
-      "Bearer eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJiM2ViMThmMGU3ZGM1MTkxNTgyOTNkZjc1MTliNTQ4MyIsIm5iZiI6MTczNDMwNTU5OS40MTY5OTk4LCJzdWIiOiI2NzVmNjczZjZmODRhMGNlMDc1ZTk1MzIiLCJzY29wZXMiOlsiYXBpX3JlYWQiXSwidmVyc2lvbiI6MX0.EGINKZ0yMZM3uLJ-V9I_wNPlec9b7MgH4X7oYcTL5mg",
-  },
-};
+const api_key = import.meta.env.VITE_API_KEY;
 
-const url = `https://api.themoviedb.org/3/search/movie?include_adult=false&language=en-US&page=1`;
+const axiosInstance = Axios.create({
+  baseURL: "https://api.themoviedb.org/3",
+  params: {
+    api_key: api_key,
+  },
+});
+
+function Loading() {
+  return <div>Loading...</div>;
+}
+
+function ErrorMessage({ message }) {
+  return <div className={Styles.ErrorMessage}>Oops! {message}</div>;
+}
+
+ErrorMessage.propTypes = {
+  message: PropTypes.string.isRequired,
+};
 
 export default function HomePage() {
   const [trendMovies, setTrendMovies] = useState([]);
@@ -23,9 +34,10 @@ export default function HomePage() {
   async function fetchTrendMovies() {
     try {
       setIsLoading(true);
-      const resault = await Axios.get(url, options);
-      const data = resault.data.resaults;
+      const response = await axiosInstance.get(`/trending/movie/day`);
+      const data = response.data.results;
       setTrendMovies(data);
+      console.log(response.data);
     } catch (error) {
       setError(error.message);
     } finally {
@@ -36,12 +48,16 @@ export default function HomePage() {
   useEffect(function () {
     fetchTrendMovies();
   }, []);
+
   return (
     <>
       <Navigation />
       <h1 className={Styles.HomePageHeader}>Trending Movies</h1>
-      {isLoading && <p>Loading...</p>}
-      {error && <p>{error.message}</p>}
+      {isLoading && <Loading />}
+      {error && <ErrorMessage message={error} />}
+      {trendMovies.length === 0 && !isLoading && !error && (
+        <p>No trending movies available right now.</p>
+      )}
       {trendMovies && <MovieList movies={trendMovies} />}
     </>
   );

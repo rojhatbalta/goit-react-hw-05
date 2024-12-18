@@ -1,18 +1,29 @@
 import { useEffect, useState } from "react";
-import { useOutletContext } from "react-router";
+import { useOutletContext } from "react-router-dom";
 import Axios from "axios";
+import PropTypes from "prop-types";
 import Styles from "./MovieCast.module.css";
 
-const options = {
-  method: "GET",
-  headers: {
-    accept: "application/json",
-    Authorization:
-      "Bearer eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJiM2ViMThmMGU3ZGM1MTkxNTgyOTNkZjc1MTliNTQ4MyIsIm5iZiI6MTczNDMwNTU5OS40MTY5OTk4LCJzdWIiOiI2NzVmNjczZjZmODRhMGNlMDc1ZTk1MzIiLCJzY29wZXMiOlsiYXBpX3JlYWQiXSwidmVyc2lvbiI6MX0.EGINKZ0yMZM3uLJ-V9I_wNPlec9b7MgH4X7oYcTL5mg",
-  },
-};
+const api_key = import.meta.env.VITE_API_KEY;
 
-const url = `https://api.themoviedb.org/3/search/movie/`;
+const axiosInstance = Axios.create({
+  baseURL: "https://api.themoviedb.org/3",
+  params: {
+    api_key: api_key,
+  },
+});
+
+function Loading() {
+  return <p>Loading cast members...</p>;
+}
+
+function ErrorMessage({ message }) {
+  return <p style={{ color: "red" }}>Oops! {message}</p>;
+}
+
+ErrorMessage.propTypes = {
+  message: PropTypes.string.isRequired,
+};
 
 export default function MovieCast() {
   const movieId = useOutletContext();
@@ -20,37 +31,40 @@ export default function MovieCast() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  useEffect(
-    function () {
-      async function fetchMovieCast() {
-        try {
-          setLoading(true);
-          const resault = await Axios.get(url + `${movieId}/credits`, options);
-          const data = await resault.data.cast;
-          if (data.length === 0) throw new Error("Can not find cast members");
-          setCast(data);
-        } catch (error) {
-          setError(error);
-        } finally {
-          setLoading(false);
+  useEffect(() => {
+    async function fetchMovieCast() {
+      try {
+        setLoading(true);
+        const response = await axiosInstance.get(`/movie/${movieId}/credits`);
+        const data = response.data.cast;
+        if (!data || data.length === 0) {
+          throw new Error("No cast members found for this movie.");
         }
+        setCast(data);
+      } catch (error) {
+        setError(error.message);
+      } finally {
+        setLoading(false);
       }
+    }
 
-      fetchMovieCast();
-    },
-    [movieId]
-  );
+    fetchMovieCast();
+  }, [movieId]);
 
   return (
     <>
-      {loading && <p>Loading cast members...</p>}
-      {error && <p>{error.message}</p>}
-      {cast.length > 0 && (
+      {loading && <Loading />}
+      {error && <ErrorMessage message={error} />}
+      {cast.length > 0 ? (
         <ul className={Styles.castList}>
           {cast.map((actor) => (
             <li key={actor.id}>
               <img
-                src={`https://image.tmdb.org/t/p/w200${actor.profile_path}`}
+                src={
+                  actor.profile_path
+                    ? `https://image.tmdb.org/t/p/w200${actor.profile_path}`
+                    : "https://via.placeholder.com/200x300?text=No+Image"
+                }
                 alt={`${actor.name} profile`}
               />
               <p>{actor.name}</p>
@@ -58,6 +72,8 @@ export default function MovieCast() {
             </li>
           ))}
         </ul>
+      ) : (
+        !loading && !error && <p>No cast members to display.</p>
       )}
     </>
   );

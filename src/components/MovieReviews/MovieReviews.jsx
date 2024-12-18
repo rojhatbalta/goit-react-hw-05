@@ -1,51 +1,61 @@
 import { useEffect, useState } from "react";
-import { useOutletContext } from "react-router";
+import { useOutletContext } from "react-router-dom";
 import Axios from "axios";
+import PropTypes from "prop-types";
 import Styles from "./MovieReviews.module.css";
 
-const options = {
-  method: "GET",
-  headers: {
-    accept: "application/json",
-    Authorization:
-      "Bearer eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJiM2ViMThmMGU3ZGM1MTkxNTgyOTNkZjc1MTliNTQ4MyIsIm5iZiI6MTczNDMwNTU5OS40MTY5OTk4LCJzdWIiOiI2NzVmNjczZjZmODRhMGNlMDc1ZTk1MzIiLCJzY29wZXMiOlsiYXBpX3JlYWQiXSwidmVyc2lvbiI6MX0.EGINKZ0yMZM3uLJ-V9I_wNPlec9b7MgH4X7oYcTL5mg",
-  },
-};
+const api_key = import.meta.env.VITE_API_KEY;
 
-const url = `https://api.themoviedb.org/3/movie/`;
+const axiosInstance = Axios.create({
+  baseURL: "https://api.themoviedb.org/3",
+  params: {
+    api_key: api_key,
+  },
+});
+
+function Loading() {
+  return <p>Loading reviews...</p>;
+}
+
+function ErrorMessage({ message }) {
+  return <p style={{ color: "red" }}>Oops! {message}</p>;
+}
+
+ErrorMessage.propTypes = {
+  message: PropTypes.string.isRequired,
+};
 
 export default function MovieReviews() {
   const movieId = useOutletContext();
   const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState("");
 
-  useEffect(
-    function () {
-      async function fetchReviews() {
-        try {
-          setLoading(true);
-          const res = await Axios.get(url + `${movieId}/reviews`, options);
-          const data = await res.data;
-          if (data.length === 0) throw new Error("Can not find any review");
-          setReviews(data.results);
-        } catch (error) {
-          setError(error);
-        } finally {
-          setLoading(false);
+  useEffect(() => {
+    async function fetchReviews() {
+      try {
+        setLoading(true);
+        const response = await axiosInstance.get(`/movie/${movieId}/reviews`);
+        const data = response.data.results;
+        if (!data || data.length === 0) {
+          throw new Error("No reviews found for this movie.");
         }
+        setReviews(data);
+      } catch (error) {
+        setError(error.message);
+      } finally {
+        setLoading(false);
       }
+    }
 
-      fetchReviews();
-    },
-    [movieId]
-  );
+    fetchReviews();
+  }, [movieId]);
 
   return (
     <>
-      {loading && <p>Loading reviews...</p>}
-      {error && <p>{error.message}</p>}
-      {reviews.length > 0 && (
+      {loading && <Loading />}
+      {error && <ErrorMessage message={error} />}
+      {reviews.length > 0 ? (
         <ul className={Styles.reviewList}>
           {reviews.map((review) => (
             <li key={review.id}>
@@ -54,6 +64,8 @@ export default function MovieReviews() {
             </li>
           ))}
         </ul>
+      ) : (
+        !loading && !error && <p>No reviews available for this movie.</p>
       )}
     </>
   );

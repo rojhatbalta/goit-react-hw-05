@@ -1,66 +1,80 @@
-import { useEffect, useRef, useState } from "react";
-import { useSearchParams } from "react-router";
+import { useEffect, useState, useCallback } from "react";
+import { useSearchParams } from "react-router-dom";
 import Axios from "axios";
-
+import PropTypes from "prop-types";
 import MovieList from "../../components/MovieList/MovieList";
 import Navigation from "../../components/Navigation/Navigation";
 
 import Styles from "./MoviesPage.module.css";
 
-const options = {
-  method: "GET",
-  headers: {
-    accept: "application/json",
-    Authorization:
-      "Bearer eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJiM2ViMThmMGU3ZGM1MTkxNTgyOTNkZjc1MTliNTQ4MyIsIm5iZiI6MTczNDMwNTU5OS40MTY5OTk4LCJzdWIiOiI2NzVmNjczZjZmODRhMGNlMDc1ZTk1MzIiLCJzY29wZXMiOlsiYXBpX3JlYWQiXSwidmVyc2lvbiI6MX0.EGINKZ0yMZM3uLJ-V9I_wNPlec9b7MgH4X7oYcTL5mg",
-  },
-};
+const api_key = import.meta.env.VITE_API_KEY;
 
-const url = `https://api.themoviedb.org/3/search/movie?include_adult=false&language=en-US&page=1>`;
+const axiosInstance = Axios.create({
+  baseURL: "https://api.themoviedb.org/3",
+  params: {
+    api_key: api_key,
+  },
+});
+
+function Loading() {
+  return <p>Loading...</p>;
+}
+
+function ErrorMessage({ message }) {
+  return <p style={{ color: "red" }}>Oops! {message}</p>;
+}
+
+ErrorMessage.propTypes = {
+  message: PropTypes.string.isRequired,
+};
 
 export default function MoviesPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [movies, setMovies] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
-  const inputRef = useRef(null);
-  const query = searchParams.get(query) || "";
+  const query = searchParams.get("query") || "";
+  const [searchTerm, setSearchTerm] = useState(query);
 
-  async function fetchMoviesBuQuery() {
+  const fetchMoviesByQuery = useCallback(async () => {
+    if (!query.trim()) return;
+
     try {
       setIsLoading(true);
-      const res = await Axios.get(url, options);
-      const data = res.data.results;
-      setMovies(data);
+      const response = await axiosInstance.get(`/search/movie`, {
+        params: { query },
+      });
+      setMovies(response.data.results);
     } catch (error) {
       setError(error.message);
     } finally {
       setIsLoading(false);
     }
-  }
+  }, [query]);
+
+  useEffect(() => {
+    fetchMoviesByQuery();
+  }, [fetchMoviesByQuery]);
 
   function handleSearch(e) {
     e.preventDefault();
-    setSearchParams({ query: inputRef.current.value });
+    setSearchParams({ query: searchTerm.trim() });
   }
-
-  useEffect(
-    function () {
-      fetchMoviesBuQuery();
-    },
-    [searchParams]
-  );
 
   return (
     <>
       <Navigation />
-      <form onSubmit={(e) => handleSearch(e)}>
-        <input type="text" ref={inputRef} />
+      <form onSubmit={handleSearch}>
+        <input
+          type="text"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+        />
         <button className={Styles.moviesPageButton}>Search</button>
       </form>
 
-      {isLoading && <p>Loading...</p>}
-      {error && <p>{error}</p>}
+      {isLoading && <Loading />}
+      {error && <ErrorMessage message={error} />}
       {movies.length > 0 && <MovieList movies={movies} />}
     </>
   );
